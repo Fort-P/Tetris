@@ -21,10 +21,9 @@ public class Main extends Application {
     int cellSize = 45;
     int rows = 20;
     int columns = 10;
-//    boolean[][] gameState = new boolean[columns][rows];
     TetrominoPiece[][] pieces = new TetrominoPiece[columns][rows];
-    TetrominoPiece currentTetromino;
-    TetrominoPiece nextTetromino;
+    TetrominoPiece[][] currentTetromino = new TetrominoPiece[3][4];
+    TetrominoPiece[][] nextTetromino = new TetrominoPiece[3][4];
     GridPane gameGrid;
     Font modernTetris16 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 16);
     Font modernTetris32 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 32);
@@ -44,7 +43,7 @@ public class Main extends Application {
 //        MediaPlayer background = new MediaPlayer(new Media("file:resources/Music/Tetris.mp3"));
 //        background.setCycleCount(-1);
 //        background.play();
-        
+
 
         // Game "Board"
         VBox board = new VBox(10);
@@ -137,34 +136,47 @@ public class Main extends Application {
         }
 
 
-        // TEMP SQUARES
-        currentTetromino = new TetrominoPiece(0, 0, Color.PINK);
-        nextTetromino = new TetrominoPiece(0, 0, Color.ORANGE);
-        gameGrid.add(currentTetromino, 0, 0);
-        nextBox.add(nextTetromino, 1, 2);
+        // Create the initial shapes
+        currentTetromino = newTetromino();
+        nextTetromino = newTetromino();
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    gameGrid.add(piece, piece.getX(), piece.getY());
+                }
+            }
+        }
 
 
         // Falling animation
         EventHandler<ActionEvent> fallingHandler = e -> { // Create a handler for the timeline
-            try {
-                // If we are on the bottom row, or if the cell below us is occupied
-                if (currentTetromino.getY() == 19 || pieces[currentTetromino.getX()][currentTetromino.getY() + 1] != null) {
-                    // Freeze the movement of the current tetromino, and transition to the next tetromino
-                    pieces[currentTetromino.getX()][currentTetromino.getY()] = currentTetromino; // Save the tetromino piece to another array for reference later
-                    if (checkRow(currentTetromino.getY())) {
-                        clearRow(currentTetromino.getY());
-                    }
-                    nextBox.getChildren().remove(nextTetromino); // Remove the tetromino from the next box
-                    currentTetromino = nextTetromino; // set the current tetromino to the next tetromino
-                    nextTetromino = newTetromino(Color.color(Math.random(), Math.random(), Math.random())); // Create a new tetromino to be the next one
-                    gameGrid.add(currentTetromino, currentTetromino.getX(), currentTetromino.getY()); // Add the new current piece to the game
-                    nextBox.add(nextTetromino, 0, 2); // Add the new next piece to the next box
+//            try {
+//                // If we are on the bottom row, or if the cell below us is occupied
+//                if (currentTetromino.getY() == 19 || pieces[currentTetromino.getX()][currentTetromino.getY() + 1] != null) {
+//                    // Freeze the movement of the current tetromino, and transition to the next tetromino
+//                    pieces[currentTetromino.getX()][currentTetromino.getY()] = currentTetromino; // Save the tetromino piece to another array for reference later
+//                    if (checkRow(currentTetromino.getY())) {
+//                        clearRow(currentTetromino.getY());
+//                    }
+//                    nextBox.getChildren().remove(nextTetromino); // Remove the tetromino from the next box
+//                    currentTetromino = nextTetromino; // set the current tetromino to the next tetromino
+//                    nextTetromino = newTetrominoPiece(5, 0, Color.color(Math.random(), Math.random(), Math.random())); // Create a new tetromino to be the next one
+//                    gameGrid.add(currentTetromino, currentTetromino.getX(), currentTetromino.getY()); // Add the new current piece to the game
+//                    nextBox.add(nextTetromino, 0, 2); // Add the new next piece to the next box
+//
+//                    printGameState();
+//                } else {
+//                    currentTetromino.moveDown();
+//                }
+//            } catch (Exception ignored) {}
 
-                    printGameState();
-                } else {
-                    currentTetromino.moveDown();
+            for (TetrominoPiece[] row : currentTetromino) {
+                for (TetrominoPiece piece : row) {
+                    if (piece != null) {
+                        piece.moveDown();
+                    }
                 }
-            } catch (Exception ignored) {}
+            }
             updateGame();
         };
 
@@ -176,28 +188,28 @@ public class Main extends Application {
 
         // Listeners
         root.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.LEFT) {
-                try {
-                    if (pieces[currentTetromino.getX() - 1][currentTetromino.getY()] == null) {
-                        currentTetromino.moveLeft();
-                    }
-                } catch (Exception ignored) {}
-                updateGame();
-            } else if (event.getCode() == KeyCode.RIGHT) {
-                try {
-                    if (pieces[currentTetromino.getX() + 1][currentTetromino.getY()] == null) {
-                        currentTetromino.moveRight();
-                    }
-                } catch (Exception ignored) {}
-                updateGame();
-            } else if (event.getCode() == KeyCode.DOWN) {
-                try {
-                    if (pieces[currentTetromino.getX()][currentTetromino.getY() + 1] == null) {
-                        currentTetromino.moveDown();
-                    }
-                } catch (Exception ignored) {}
-                updateGame();
-            }
+//            if (event.getCode() == KeyCode.LEFT) {
+//                try {
+//                    if (pieces[currentTetromino.getX() - 1][currentTetromino.getY()] == null) {
+//                        currentTetromino.moveLeft();
+//                    }
+//                } catch (Exception ignored) {}
+//                updateGame();
+//            } else if (event.getCode() == KeyCode.RIGHT) {
+//                try {
+//                    if (pieces[currentTetromino.getX() + 1][currentTetromino.getY()] == null) {
+//                        currentTetromino.moveRight();
+//                    }
+//                } catch (Exception ignored) {}
+//                updateGame();
+//            } else if (event.getCode() == KeyCode.DOWN) {
+//                try {
+//                    if (pieces[currentTetromino.getX()][currentTetromino.getY() + 1] == null) {
+//                        currentTetromino.moveDown();
+//                    }
+//                } catch (Exception ignored) {}
+//                updateGame();
+//            }
         });
 
 
@@ -226,16 +238,70 @@ public class Main extends Application {
         printGameState();
     }
 
-    public TetrominoPiece newTetromino (Paint color) {
-        return new TetrominoPiece(0, 0, color);
+    public TetrominoPiece[][] newTetromino () {
+        boolean[][] template;
+        TetrominoPiece[][] shape = new TetrominoPiece[4][3];
+        Paint color;
+        switch ((int) (Math.random() * 7)) { //Randomly choose one of our block templates
+            case 0:
+                template = Templates.I;
+                color = Color.LIGHTBLUE;
+                break;
+            case 1:
+                template = Templates.O;
+                color = Color.YELLOW;
+                break;
+            case 2:
+                template = Templates.T;
+                color = Color.PURPLE;
+                break;
+            case 3:
+                template = Templates.S;
+                color = Color.LIME;
+                break;
+            case 4:
+                template = Templates.Z;
+                color = Color.RED;
+                break;
+            case 5:
+                template = Templates.J;
+                color = Color.BLUE;
+                break;
+            case 6:
+                template = Templates.L;
+                color = Color.ORANGE;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value");
+        }
+
+        for (int row = 0; row < 4; row++) {
+            for (int column = 0; column < 3; column++) {
+                if (template[row][column]) {
+                    shape[row][column] = new TetrominoPiece(column + 4, row, color);
+                }
+            }
+        }
+
+        return shape;
     }
 
+    /**
+     * Updates the game. Called as often as needed, but at least once per second
+     */
     public void updateGame () {
-        GridPane.setConstraints(currentTetromino, currentTetromino.getX(), currentTetromino.getY());
+        // Update the current Tetromino
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    GridPane.setConstraints(piece, piece.getX(), piece.getY());
+                }
+            }
+        }
         for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < columns; column++) {
+            for (int column = 0; column < columns; column++) { // For every piece in the grid...
                 try {
-                    GridPane.setConstraints(pieces[column][row], pieces[column][row].getX(), pieces[column][row].getY());
+                    GridPane.setConstraints(pieces[column][row], pieces[column][row].getX(), pieces[column][row].getY()); // ...Update it
                 } catch (Exception ignored) {}
             }
         }
@@ -243,11 +309,12 @@ public class Main extends Application {
 
     /**
      * Checks if a given row is full
-     * @param row row to check
+     * @param row The row to check
      * @return boolean: true if full, false if not
      */
     public boolean checkRow (int row) {
         for (int column = 0; column < columns; column++) {
+            // If any space within the given row is null, there must be an empty space, so return false
             if (pieces[column][row] == null) {
                 return false;
             }
@@ -255,6 +322,10 @@ public class Main extends Application {
         return true;
     }
 
+    /**
+     * Clears the pieces from a given row
+     * @param row The row to clear
+     */
     public void clearRow (int row) {
         for (int column = 0; column < columns; column++) {
                 gameGrid.getChildren().remove(pieces[column][row]);
@@ -263,6 +334,10 @@ public class Main extends Application {
         triggerFall(row);
     }
 
+    /**
+     * Makes all blocks with air under them fall
+     * @param startRow The row to start checking for falling blocks at
+     */
     public void triggerFall (int startRow) {
         for (int row = startRow; row >= 0; row--) {
             for (int column = 0; column < columns; column++) {
@@ -276,6 +351,9 @@ public class Main extends Application {
         }
     }
 
+    /**
+     * Prints the current game state to the console
+     */
     public void printGameState () {
         for (int row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
