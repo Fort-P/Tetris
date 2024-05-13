@@ -21,7 +21,7 @@ public class Main extends Application {
     int cellSize = 45;
     int rows = 20;
     int columns = 10;
-    boolean[][] gameState = new boolean[columns][rows];
+//    boolean[][] gameState = new boolean[columns][rows];
     TetrominoPiece[][] pieces = new TetrominoPiece[columns][rows];
     TetrominoPiece currentTetromino;
     TetrominoPiece nextTetromino;
@@ -40,6 +40,12 @@ public class Main extends Application {
         root.setStyle("-fx-background-color: black");
 
 
+        // Background music
+//        MediaPlayer background = new MediaPlayer(new Media("file:resources/Music/Tetris.mp3"));
+//        background.setCycleCount(-1);
+//        background.play();
+        
+
         // Game "Board"
         VBox board = new VBox(10);
         board.setStyle("-fx-border-color: lightgray; -fx-border-width: 5px; -fx-border-radius: 5%;");
@@ -56,13 +62,6 @@ public class Main extends Application {
         // The actual playable space
         gameGrid = new GridPane();
         gameGrid.setPrefSize(columns * cellSize, rows * cellSize); // Gives me a grid that is basically 10x20 if all my squares are 50px
-
-        // Set the game board to be empty
-        for (int column = 0; column < columns; column++) {
-            for (int row = 0; row < rows; row++) {
-                gameState[column][row] = false;
-            }
-        }
 
         // Set all the columns to be equal width (Without this, they are all 0px)
         ColumnConstraints gameCC = new ColumnConstraints();
@@ -149,9 +148,8 @@ public class Main extends Application {
         EventHandler<ActionEvent> fallingHandler = e -> { // Create a handler for the timeline
             try {
                 // If we are on the bottom row, or if the cell below us is occupied
-                if (currentTetromino.getY() == 19 || gameState[currentTetromino.getX()][currentTetromino.getY() + 1]) {
+                if (currentTetromino.getY() == 19 || pieces[currentTetromino.getX()][currentTetromino.getY() + 1] != null) {
                     // Freeze the movement of the current tetromino, and transition to the next tetromino
-                    gameState[currentTetromino.getX()][currentTetromino.getY()] = true; // Tell the computer that there is a piece at this location
                     pieces[currentTetromino.getX()][currentTetromino.getY()] = currentTetromino; // Save the tetromino piece to another array for reference later
                     if (checkRow(currentTetromino.getY())) {
                         clearRow(currentTetromino.getY());
@@ -162,12 +160,7 @@ public class Main extends Application {
                     gameGrid.add(currentTetromino, currentTetromino.getX(), currentTetromino.getY()); // Add the new current piece to the game
                     nextBox.add(nextTetromino, 0, 2); // Add the new next piece to the next box
 
-                    for (int row = 0; row < rows; row++) {
-                        for (int column = 0; column < columns; column++) {
-                            System.out.print(pieces[column][row] + " ");
-                        }
-                        System.out.println();
-                    }
+                    printGameState();
                 } else {
                     currentTetromino.moveDown();
                 }
@@ -185,21 +178,21 @@ public class Main extends Application {
         root.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.LEFT) {
                 try {
-                    if (!gameState[currentTetromino.getX() - 1][currentTetromino.getY()]) {
+                    if (pieces[currentTetromino.getX() - 1][currentTetromino.getY()] == null) {
                         currentTetromino.moveLeft();
                     }
                 } catch (Exception ignored) {}
                 updateGame();
             } else if (event.getCode() == KeyCode.RIGHT) {
                 try {
-                    if (!gameState[currentTetromino.getX() + 1][currentTetromino.getY()]) {
+                    if (pieces[currentTetromino.getX() + 1][currentTetromino.getY()] == null) {
                         currentTetromino.moveRight();
                     }
                 } catch (Exception ignored) {}
                 updateGame();
             } else if (event.getCode() == KeyCode.DOWN) {
                 try {
-                    if (!gameState[currentTetromino.getX()][currentTetromino.getY() + 1]) {
+                    if (pieces[currentTetromino.getX()][currentTetromino.getY() + 1] == null) {
                         currentTetromino.moveDown();
                     }
                 } catch (Exception ignored) {}
@@ -230,12 +223,7 @@ public class Main extends Application {
         primaryStage.show();
         root.requestFocus(); // Give the root pane focus so that keypress events register
 
-        for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < columns; column++) {
-                System.out.print(pieces[column][row] + " ");
-            }
-            System.out.println();
-        }
+        printGameState();
     }
 
     public TetrominoPiece newTetromino (Paint color) {
@@ -244,11 +232,23 @@ public class Main extends Application {
 
     public void updateGame () {
         GridPane.setConstraints(currentTetromino, currentTetromino.getX(), currentTetromino.getY());
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                try {
+                    GridPane.setConstraints(pieces[column][row], pieces[column][row].getX(), pieces[column][row].getY());
+                } catch (Exception ignored) {}
+            }
+        }
     }
 
+    /**
+     * Checks if a given row is full
+     * @param row row to check
+     * @return boolean: true if full, false if not
+     */
     public boolean checkRow (int row) {
         for (int column = 0; column < columns; column++) {
-            if (!gameState[column][row]) {
+            if (pieces[column][row] == null) {
                 return false;
             }
         }
@@ -257,9 +257,31 @@ public class Main extends Application {
 
     public void clearRow (int row) {
         for (int column = 0; column < columns; column++) {
-                gameState[column][row] = false;
                 gameGrid.getChildren().remove(pieces[column][row]);
                 pieces[column][row] = null;
+        }
+        triggerFall(row);
+    }
+
+    public void triggerFall (int startRow) {
+        for (int row = startRow; row >= 0; row--) {
+            for (int column = 0; column < columns; column++) {
+                if (pieces[column][row] != null && pieces[column][row + 1] == null) {
+                    pieces[column][row].moveDown(); // Move the piece down
+                    pieces[column][row + 1] = pieces[column][row]; // Set the space below to the piece above
+                    pieces[column][row] = null; // Clear the space the piece was in
+                }
+                printGameState();
+            }
+        }
+    }
+
+    public void printGameState () {
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                System.out.print(pieces[column][row] + " ");
+            }
+            System.out.println();
         }
     }
 }
