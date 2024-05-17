@@ -3,10 +3,10 @@ import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -25,6 +25,7 @@ public class Main extends Application {
     TetrominoPiece[][] currentTetromino = new TetrominoPiece[3][4];
     TetrominoPiece[][] nextTetromino = new TetrominoPiece[3][4];
     GridPane gameGrid;
+    GridPane nextBox;
     Font modernTetris16 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 16);
     Font modernTetris32 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 32);
 
@@ -88,7 +89,6 @@ public class Main extends Application {
         holdLabel.setFill(Color.LIGHTGRAY);
 
         GridPane holdBox = new GridPane();
-        holdBox.setPadding(new Insets(10));
         holdBox.setPrefSize(3 * cellSize, 4 * cellSize); // The largest width and height respectively of an individual tetromino
 
         // Set all the columns to be equal width (Without this, they are all 0px)
@@ -117,8 +117,7 @@ public class Main extends Application {
         nextLabel.setFont(modernTetris16);
         nextLabel.setFill(Color.LIGHTGRAY);
 
-        GridPane nextBox = new GridPane();
-        nextBox.setPadding(new Insets(10));
+        nextBox = new GridPane();
         nextBox.setPrefSize(3 * cellSize, 4 * cellSize); // The largest width and height respectively of an individual tetromino
 
         // Set all the columns to be equal width (Without this, they are all 0px)
@@ -138,7 +137,6 @@ public class Main extends Application {
 
         // Create the initial shapes
         currentTetromino = newTetromino();
-        nextTetromino = newTetromino();
         for (TetrominoPiece[] row : currentTetromino) {
             for (TetrominoPiece piece : row) {
                 if (piece != null) {
@@ -147,9 +145,41 @@ public class Main extends Application {
             }
         }
 
+        nextTetromino = newTetromino();
+        for (TetrominoPiece[] row : nextTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    nextBox.add(piece, piece.getX() - 4, piece.getY());
+                }
+            }
+        }
+
 
         // Falling animation
         EventHandler<ActionEvent> fallingHandler = e -> { // Create a handler for the timeline
+            try {
+                int[] Ys = getMinYs(); // The Y values of each Tetromino piece along the bottom edge of the shape
+                int[] Xs = getXs(); // The X values the shape takes up
+
+                // The if statement checks whether there is a piece below any of the pieces of the current piece
+                // If there is, then change pieces
+                if (pieces[Xs[0]][Ys[0] + 1] != null || pieces[Xs[1]][Ys[1] + 1] != null || pieces[Xs[2]][Ys[2] + 1] != null) {
+                    changePieces();
+                }
+
+            // If we get an error, it is because one of the current pieces is on the bottom row, so also call change pieces
+            } catch (ArrayIndexOutOfBoundsException exception) {
+                changePieces();
+            } finally { // Finally, after we've checked for the need to change pieces, move the current piece down
+                for (TetrominoPiece[] row : currentTetromino) {
+                    for (TetrominoPiece piece : row) {
+                        if (piece != null) {
+                            piece.moveDown();
+                        }
+                    }
+                }
+            }
+            updateGame();
 //            try {
 //                // If we are on the bottom row, or if the cell below us is occupied
 //                if (currentTetromino.getY() == 19 || pieces[currentTetromino.getX()][currentTetromino.getY() + 1] != null) {
@@ -168,16 +198,7 @@ public class Main extends Application {
 //                } else {
 //                    currentTetromino.moveDown();
 //                }
-//            } catch (Exception ignored) {}
-
-            for (TetrominoPiece[] row : currentTetromino) {
-                for (TetrominoPiece piece : row) {
-                    if (piece != null) {
-                        piece.moveDown();
-                    }
-                }
-            }
-            updateGame();
+//            } catch (ArrayIndexOutOfBoundsException ignored) {}
         };
 
         // Create the falling timeline
@@ -187,30 +208,7 @@ public class Main extends Application {
 
 
         // Listeners
-        root.setOnKeyPressed(event -> {
-//            if (event.getCode() == KeyCode.LEFT) {
-//                try {
-//                    if (pieces[currentTetromino.getX() - 1][currentTetromino.getY()] == null) {
-//                        currentTetromino.moveLeft();
-//                    }
-//                } catch (Exception ignored) {}
-//                updateGame();
-//            } else if (event.getCode() == KeyCode.RIGHT) {
-//                try {
-//                    if (pieces[currentTetromino.getX() + 1][currentTetromino.getY()] == null) {
-//                        currentTetromino.moveRight();
-//                    }
-//                } catch (Exception ignored) {}
-//                updateGame();
-//            } else if (event.getCode() == KeyCode.DOWN) {
-//                try {
-//                    if (pieces[currentTetromino.getX()][currentTetromino.getY() + 1] == null) {
-//                        currentTetromino.moveDown();
-//                    }
-//                } catch (Exception ignored) {}
-//                updateGame();
-//            }
-        });
+        root.setOnKeyPressed(KeyListener);
 
 
         // Add Items to the scene
@@ -233,7 +231,61 @@ public class Main extends Application {
         primaryStage.setScene(sc);
         primaryStage.setTitle("Tetris");
         primaryStage.show();
-        root.requestFocus(); // Give the root pane focus so that keypress events register
+        root.requestFocus(); // Give the root pane focus so that key press events register
+
+        printGameState();
+    }
+
+    private void changePieces () {
+        // Save all the pieces of the current tetromino to the game grid
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    pieces[piece.getX()][piece.getY()] = piece;
+                }
+            }
+        }
+
+        // Check for full rows, from bottom to top
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (TetrominoPiece piece : row) { // The Number of times this runs per row is slightly redundant,
+                // but I am too lazy to fix it...
+                if (piece != null) {
+                    if (checkRow(piece.getY())) {
+                        clearRow(piece.getY());
+                    }
+                }
+            }
+        }
+
+        // Remove all parts of the next Tetromino from the next pane
+        for (TetrominoPiece[] row : nextTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    nextBox.getChildren().remove(piece);
+                }
+            }
+        }
+
+        // Set the current tetromino to the next tetromino, and add it to the game grid
+        currentTetromino = nextTetromino;
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    gameGrid.add(piece, piece.getX(), piece.getY());
+                }
+            }
+        }
+
+        // Generate a new next tetromino, and add it to the next box
+        nextTetromino = newTetromino();
+        for (TetrominoPiece[] row : nextTetromino) {
+            for (TetrominoPiece piece : row) {
+                if (piece != null) {
+                    nextBox.add(piece, piece.getX() - 4, piece.getY());
+                }
+            }
+        }
 
         printGameState();
     }
@@ -245,7 +297,7 @@ public class Main extends Application {
         switch ((int) (Math.random() * 7)) { //Randomly choose one of our block templates
             case 0:
                 template = Templates.I;
-                color = Color.LIGHTBLUE;
+                color = Color.AQUA;
                 break;
             case 1:
                 template = Templates.O;
@@ -300,9 +352,9 @@ public class Main extends Application {
         }
         for (int row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) { // For every piece in the grid...
-                try {
+                if (pieces[column][row] != null) {
                     GridPane.setConstraints(pieces[column][row], pieces[column][row].getX(), pieces[column][row].getY()); // ...Update it
-                } catch (Exception ignored) {}
+                }
             }
         }
     }
@@ -331,6 +383,7 @@ public class Main extends Application {
                 gameGrid.getChildren().remove(pieces[column][row]);
                 pieces[column][row] = null;
         }
+        score++;
         triggerFall(row);
     }
 
@@ -351,6 +404,70 @@ public class Main extends Application {
         }
     }
 
+    public int[] getXs () {
+        int[] Xs = new int[3];
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (int column = 0; column < row.length; column++) {
+                if (row[column] != null) {
+                    Xs[column] = row[column].getX();
+                }
+            }
+        }
+        return Xs;
+    }
+
+    public int[] getYs () {
+        int[] Ys = new int[4];
+        for (int row = 0; row < currentTetromino.length; row++) {
+            for (TetrominoPiece piece : currentTetromino[row]) {
+                if (piece != null) {
+                    Ys[row] = piece.getY();
+                }
+            }
+        }
+        return Ys;
+    }
+
+    public int[] getMinYs () {
+        int[] Ys = new int[3];
+        for (TetrominoPiece[] row : currentTetromino) {
+            for (int column = 0; column < row.length; column++) {
+                if (row[column] != null) {
+                    Ys[column] = row[column].getY();
+                }
+            }
+        }
+        return Ys;
+    }
+
+    public int[] getLeft () {
+        int[] min = {columns - 1, columns - 1, columns - 1, columns - 1};
+        for (int row = 0; row < currentTetromino.length; row++) {
+            for (TetrominoPiece piece : currentTetromino[row]) {
+                if (piece != null) {
+                    if (piece.getX() < min[row]) {
+                        min[row] = piece.getX();
+                    }
+                }
+            }
+        }
+        return min;
+    }
+
+    public int[] getRight () {
+        int[] max = {0, 0, 0, 0};
+        for (int row = 0; row < currentTetromino.length; row++) {
+            for (TetrominoPiece piece : currentTetromino[row]) {
+                if (piece != null) {
+                    if (piece.getX() > max[row]) {
+                        max[row] = piece.getX();
+                    }
+                }
+            }
+        }
+        return max;
+    }
+
     /**
      * Prints the current game state to the console
      */
@@ -362,4 +479,56 @@ public class Main extends Application {
             System.out.println();
         }
     }
+
+    private final EventHandler<KeyEvent> KeyListener = event -> {
+        if (event.getCode() == KeyCode.LEFT) {
+            try {
+                int[] min = getLeft();
+                int[] Ys = getYs();
+                if (pieces[min[0] - 1][Ys[0]] == null && pieces[min[1] - 1][Ys[1]] == null && pieces[min[2] - 1][Ys[2]] == null && pieces[min[3] - 1][Ys[3]] == null
+                 && min[0] != 0 && min[1] != 0 && min[2] != 0 && min[3] != 0) { // Not sure
+                    // why IntelliJ insists that these are always true, they are definitely not...
+                    for (TetrominoPiece[] row : currentTetromino) {
+                        for (TetrominoPiece piece : row) {
+                            if (piece != null) {
+                                piece.moveLeft();
+                            }
+                        }
+                    }
+                }
+            } catch (ArrayIndexOutOfBoundsException ignored) {}
+            updateGame();
+        } else if (event.getCode() == KeyCode.RIGHT) {
+            try {
+                int[] max = getRight();
+                int[] Ys = getYs();
+                if (pieces[max[0] + 1][Ys[0]] == null && pieces[max[1] + 1][Ys[1]] == null && pieces[max[2] + 1][Ys[2]] == null && pieces[max[3] + 1][Ys[3]] == null
+                        && max[0] != 9 && max[1] != 9 && max[2] != 9 && max[3] != 9) {
+                    for (TetrominoPiece[] row : currentTetromino) {
+                        for (TetrominoPiece piece : row) {
+                            if (piece != null) {
+                                piece.moveRight();
+                            }
+                        }
+                    }
+                }
+            } catch (ArrayIndexOutOfBoundsException ignored) {}
+            updateGame();
+            } else if (event.getCode() == KeyCode.DOWN) {
+                try {
+                    int[] Ys = getMinYs(); // The Y values of each Tetromino piece along the bottom edge of the shape
+                    int[] Xs = getXs(); // The X values the shape takes up
+                    if (pieces[Xs[0]][Ys[0] + 1] == null && pieces[Xs[1]][Ys[1] + 1] == null && pieces[Xs[2]][Ys[2] + 1] == null) {
+                        for (TetrominoPiece[] row : currentTetromino) {
+                            for (TetrominoPiece piece : row) {
+                                if (piece != null) {
+                                    piece.moveDown();
+                                }
+                            }
+                        }
+                    }
+                } catch (ArrayIndexOutOfBoundsException ignored) {}
+                updateGame();
+        }
+    };
 }
