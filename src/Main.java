@@ -5,11 +5,13 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -28,6 +30,7 @@ public class Main extends Application {
     GridPane nextBox;
     Font modernTetris16 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 16);
     Font modernTetris32 = Font.loadFont("file:resources/fonts/modern-tetris.otf", 32);
+    Timeline falling;
 
     public static void main(String[] args) {
         launch(args);
@@ -135,6 +138,20 @@ public class Main extends Application {
         }
 
 
+        // Add help button
+        Circle helpButtonShape = new Circle(30);
+        helpButtonShape.setStroke(Color.LIGHTGRAY);
+        helpButtonShape.setStrokeWidth(5);
+        Text helpButtonText = new Text("?");
+        helpButtonText.setFont(modernTetris32);
+        helpButtonText.setFill(Color.LIGHTGRAY);
+        StackPane helpButton = new StackPane();
+        helpButton.getChildren().addAll(helpButtonShape, helpButtonText);
+        helpButton.setLayoutX(650);
+        helpButton.setLayoutY(900);
+        helpButton.setOnMouseClicked(e -> showHelpWindow());
+
+
         // Create the initial shapes
         currentTetromino = newTetromino();
         for (TetrominoPiece[] row : currentTetromino) {
@@ -202,9 +219,8 @@ public class Main extends Application {
         };
 
         // Create the falling timeline
-        Timeline falling = new Timeline(new KeyFrame(Duration.millis(1000), fallingHandler));
+        falling = new Timeline(new KeyFrame(Duration.millis(1000), fallingHandler));
         falling.setCycleCount(-1);
-        falling.play(); // Start animation
 
 
         // Listeners
@@ -224,6 +240,7 @@ public class Main extends Application {
         root.getChildren().add(holdPane);
         root.getChildren().add(board);
         root.getChildren().add(nextPane);
+        root.getChildren().add(helpButton);
 
 
         // Create & show the scene
@@ -232,8 +249,9 @@ public class Main extends Application {
         primaryStage.setTitle("Tetris");
         primaryStage.show();
         root.requestFocus(); // Give the root pane focus so that key press events register
+        showHelpWindow(); // Show the help window at startup
 
-        printGameState();
+//        printGameState();
     }
 
     private void changePieces () {
@@ -531,4 +549,32 @@ public class Main extends Application {
                 updateGame();
         }
     };
+
+    // Show help window
+    private void showHelpWindow() {
+        falling.pause();
+        Stage helpStage = new Stage();
+        helpStage.setTitle("Help");
+
+        VBox helpVBox = new VBox(10);
+        helpVBox.setAlignment(Pos.CENTER);
+        helpVBox.setStyle("-fx-background-color: black; -fx-padding: 20; -fx-border-color: lightgray; -fx-border-width: 5px; -fx-border-radius: 1%;");
+
+        Text helpText = new Text("Use the arrow keys to move the pieces.\n" +
+                "Press DOWN to speed up the falling.\n" +
+                "Press LEFT or RIGHT to move the pieces horizontally.");
+        helpText.setFill(Color.LIGHTGRAY);
+
+        Button closeButton = new Button("Close");
+        closeButton.setOnAction(e -> {
+            helpStage.close();
+            falling.play();
+        });
+
+        helpVBox.getChildren().addAll(helpText, closeButton);
+
+        Scene helpScene = new Scene(helpVBox, 400, 200);
+        helpStage.setScene(helpScene);
+        helpStage.show();
+    }
 }
